@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据可视化实训平台</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div class="container">
+                <h1>📊 数据可视化实训平台</h1>
+                <nav>
+                    <button id="nav-student" class="active">学生端</button>
+                    <button id="nav-teacher">教师端</button>
+                    <button id="nav-dashboard">大屏实训</button>
+                </nav>
+            </div>
+        </header>
+
+        <main class="container">
+            <section id="student-section">
+                <div class="student-form">
+                    <h2>学生信息</h2>
+                    <div class="form-group">
+                        <label>学号</label>
+                        <input type="text" id="stu-id" placeholder="请输入学号">
+                    </div>
+                    <div class="form-group">
+                        <label>姓名</label>
+                        <input type="text" id="stu-name" placeholder="请输入姓名">
+                    </div>
+                    <button id="enter-platform" class="primary-btn">进入实训</button>
+                </div>
+
+                <div id="training-area" style="display: none;">
+                    <div class="task-sidebar">
+                        <h3>实训任务</h3>
+                        <div id="task-list"></div>
+                    </div>
+
+                    <div class="main-content">
+                        <div id="task-detail" class="task-detail"></div>
+                        
+                        <div class="chart-workspace">
+                            <div class="config-panel">
+                                <h3>图表配置</h3>
+                                <div id="config-form"></div>
+                                <div class="action-buttons">
+                                    <button id="preview-chart" class="primary-btn">预览图表</button>
+                                    <button id="submit-answer" class="success-btn">提交答案</button>
+                                </div>
+                            </div>
+                            <div class="chart-preview">
+                                <h3>图表预览</h3>
+                                <div id="chart-container"></div>
+                            </div>
+                        </div>
+
+                        <div id="score-report" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div id="my-scores" style="display: none;">
+                    <div class="scores-header">
+                        <h2>我的成绩</h2>
+                        <button id="back-to-training" class="secondary-btn">返回实训</button>
+                    </div>
+                    <div id="scores-list"></div>
+                </div>
+            </section>
+
+            <section id="teacher-section" style="display: none;">
+                <div class="teacher-controls">
+                    <div class="filter-group">
+                        <label>任务筛选</label>
+                        <select id="filter-task">
+                            <option value="">全部任务</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>学号/姓名</label>
+                        <input type="text" id="filter-keyword" placeholder="搜索...">
+                    </div>
+                    <button id="export-csv" class="primary-btn">导出成绩</button>
+                </div>
+
+                <div id="stats-dashboard">
+                    <div class="stat-card">
+                        <h4>总提交数</h4>
+                        <div class="stat-value" id="stat-total">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>平均分</h4>
+                        <div class="stat-value" id="stat-avg">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>及格率</h4>
+                        <div class="stat-value" id="stat-pass">0%</div>
+                    </div>
+                </div>
+
+                <div id="error-stats">
+                    <h3>高频错误统计</h3>
+                    <div id="error-list"></div>
+                </div>
+
+                <div class="submissions-table-container">
+                    <h3>提交记录</h3>
+                    <table id="submissions-table">
+                        <thead>
+                            <tr>
+                                <th>学号</th>
+                                <th>姓名</th>
+                                <th>任务</th>
+                                <th>分数</th>
+                                <th>提交时间</th>
+                                <th>详情</th>
+                            </tr>
+                        </thead>
+                        <tbody id="submissions-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="dashboard-section" style="display: none;">
+                <div class="dashboard-section-content">
+                    <h2>炫酷大屏实训</h2>
+                    <p>在本模块中，你可以自由设计和定制数据大屏，选择不同位置插入各种图表，并调整整体氛围效果。</p>
+                    <div id="dashboard-container" class="dashboard-container tech-dark"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="src/core/TaskManager.js"></script>
+    <script src="src/core/ChartRenderer.js"></script>
+    <script src="src/core/ScoreManager.js"></script>
+    <script src="src/core/DashboardManager.js"></script>
+    <script src="src/app.js"></script>
+</body>
+</html>

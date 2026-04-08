@@ -1,0 +1,12 @@
+{
+  "name": "data-viz-training-platform",
+  "version": "1.0.0",
+  "description": "数据可视化课程轻量化实训系统",
+  "scripts": {
+    "dev": "python3 -m http.server 8080",
+    "start": "python3 -m http.server 8080"
+  },
+  "keywords": ["data-visualization", "echarts", "training", "education"],
+  "author": "",
+  "license": "MIT"
+}

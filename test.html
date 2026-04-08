@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试页面</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <h1>测试页面</h1>
+    <div id="test-results"></div>
+    
+    <script src="data.js"></script>
+    <script src="src/core/TaskManager.js"></script>
+    <script src="src/core/ChartRenderer.js"></script>
+    <script src="src/core/ScoreManager.js"></script>
+    <script src="src/core/DashboardManager.js"></script>
+    <script src="src/app.js"></script>
+    
+    <script>
+        function testModuleLoading() {
+            const results = document.getElementById('test-results');
+            let html = '<h2>模块加载测试结果</h2>';
+            
+            // 测试数据模块
+            if (window.TASKS) {
+                html += '<p style="color: green;">✅ 数据模块加载成功：' + window.TASKS.length + ' 个任务</p>';
+            } else {
+                html += '<p style="color: red;">❌ 数据模块加载失败</p>';
+            }
+            
+            // 测试核心模块
+            const modules = ['TaskManager', 'ChartRenderer', 'ScoreManager', 'DashboardManager'];
+            modules.forEach(module => {
+                if (window[module]) {
+                    html += '<p style="color: green;">✅ ' + module + ' 模块加载成功</p>';
+                } else {
+                    html += '<p style="color: red;">❌ ' + module + ' 模块加载失败</p>';
+                }
+            });
+            
+            // 测试应用初始化
+            if (window.app) {
+                html += '<p style="color: green;">✅ 应用初始化成功</p>';
+            } else {
+                html += '<p style="color: red;">❌ 应用初始化失败</p>';
+            }
+            
+            results.innerHTML = html;
+        }
+        
+        // 页面加载完成后测试
+        window.addEventListener('load', testModuleLoading);
+    </script>
+</body>
+</html>
