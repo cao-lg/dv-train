@@ -7,32 +7,57 @@ class ScoreManager {
   getConfig() {
     const config = {};
 
-    const chartTypeEl = document.getElementById('config-chartType');
-    if (chartTypeEl) config.chartType = chartTypeEl.value;
+    // 检查是否为仪表盘任务
+    const dashboardConfig = document.querySelector('.dashboard-config');
+    if (dashboardConfig) {
+      // 收集子任务配置
+      const subTasks = [];
+      let index = 0;
+      while (true) {
+        const chartTypeEl = document.getElementById(`config-subtask-${index}-chartType`);
+        if (!chartTypeEl) break;
+        
+        const titleEl = document.getElementById(`config-subtask-${index}-title`);
+        subTasks.push({
+          chartType: chartTypeEl.value,
+          title: titleEl ? titleEl.value : ''
+        });
+        index++;
+      }
+      config.subTasks = subTasks;
+      
+      // 收集布局配置
+      const layoutEl = document.getElementById('config-layout');
+      if (layoutEl) config.layout = layoutEl.value;
+    } else {
+      // 普通任务配置
+      const chartTypeEl = document.getElementById('config-chartType');
+      if (chartTypeEl) config.chartType = chartTypeEl.value;
 
-    const dimensionEl = document.getElementById('config-dimension');
-    if (dimensionEl) config.dimension = dimensionEl.value;
+      const dimensionEl = document.getElementById('config-dimension');
+      if (dimensionEl) config.dimension = dimensionEl.value;
 
-    const categoryEl = document.getElementById('config-category');
-    if (categoryEl) config.category = categoryEl.value;
+      const categoryEl = document.getElementById('config-category');
+      if (categoryEl) config.category = categoryEl.value;
 
-    const measureEl = document.getElementById('config-measure');
-    if (measureEl) config.measure = measureEl.value;
+      const measureEl = document.getElementById('config-measure');
+      if (measureEl) config.measure = measureEl.value;
 
-    const valueEl = document.getElementById('config-value');
-    if (valueEl) config.value = valueEl.value;
+      const valueEl = document.getElementById('config-value');
+      if (valueEl) config.value = valueEl.value;
 
-    const mainMeasureEl = document.getElementById('config-mainMeasure');
-    if (mainMeasureEl) config.mainMeasure = mainMeasureEl.value;
+      const mainMeasureEl = document.getElementById('config-mainMeasure');
+      if (mainMeasureEl) config.mainMeasure = mainMeasureEl.value;
 
-    const subMeasureEl = document.getElementById('config-subMeasure');
-    if (subMeasureEl) config.subMeasure = subMeasureEl.value;
+      const subMeasureEl = document.getElementById('config-subMeasure');
+      if (subMeasureEl) config.subMeasure = subMeasureEl.value;
 
-    const themeEl = document.getElementById('config-theme');
-    if (themeEl) config.theme = themeEl.value;
+      const themeEl = document.getElementById('config-theme');
+      if (themeEl) config.theme = themeEl.value;
 
-    const titleEl = document.getElementById('config-title');
-    if (titleEl) config.title = titleEl.value;
+      const titleEl = document.getElementById('config-title');
+      if (titleEl) config.title = titleEl.value;
+    }
 
     return config;
   }
@@ -62,36 +87,87 @@ class ScoreManager {
   }
 
   scoreAnswer(task, config) {
-    const answer = task.answer;
-    const rules = task.scoringRules;
     const details = [];
     let totalScore = 0;
 
-    for (const [key, rule] of Object.entries(rules)) {
-      if (key === 'subTasks' || key === 'layout') continue;
-
-      let correct = false;
-      let hint = rule.hint;
-
-      if (key === 'title' && rule.check) {
-        correct = rule.check(config.title);
-      } else if (config[key] !== undefined && answer[key] !== undefined) {
-        correct = config[key] === answer[key];
+    if (task.isDashboard) {
+      // 处理仪表盘任务评分
+      const rules = task.scoringRules;
+      
+      // 评分子任务
+      if (rules.subTasks) {
+        task.subTasks.forEach((subTask, index) => {
+          const subConfig = config.subTasks?.[index];
+          let subScore = 0;
+          
+          if (subConfig) {
+            // 检查图表类型
+            if (subConfig.chartType === subTask.answer.chartType) {
+              subScore += subTask.score * 0.7;
+            }
+            // 检查标题
+            if (subConfig.title && subConfig.title.includes(subTask.answer.title.split(' ')[0])) {
+              subScore += subTask.score * 0.3;
+            }
+          }
+          
+          totalScore += subScore;
+          details.push({
+            item: `子任务${index + 1}: ${subTask.name}`,
+            score: subScore,
+            maxScore: subTask.score,
+            correct: subScore === subTask.score,
+            hint: `请正确配置${subTask.name}`,
+            userValue: subConfig?.chartType || '未配置',
+            answerValue: subTask.answer.chartType
+          });
+        });
       }
-
-      if (correct) {
-        totalScore += rule.score;
+      
+      // 评分布局
+      if (rules.layout) {
+        totalScore += rules.layout;
+        details.push({
+          item: '布局',
+          score: rules.layout,
+          maxScore: rules.layout,
+          correct: true,
+          hint: '布局配置正确',
+          userValue: config.layout || '默认',
+          answerValue: '布局正确'
+        });
       }
+    } else {
+      // 处理普通任务评分
+      const answer = task.answer;
+      const rules = task.scoringRules;
 
-      details.push({
-        item: key,
-        score: correct ? rule.score : 0,
-        maxScore: rule.score,
-        correct,
-        hint,
-        userValue: config[key],
-        answerValue: answer[key]
-      });
+      for (const [key, rule] of Object.entries(rules)) {
+        if (key === 'subTasks' || key === 'layout') continue;
+
+        let correct = false;
+        let hint = rule.hint;
+
+        if (key === 'title' && rule.check) {
+          correct = rule.check(config.title);
+        } else if (config[key] !== undefined && answer[key] !== undefined) {
+          correct = config[key] === answer[key];
+        }
+
+        if (correct) {
+          totalScore += rule.score;
+        }
+
+        details.push({
+          item: key,
+          score: correct ? rule.score : 0,
+          maxScore: rule.score,
+          correct,
+          hint,
+          userValue: config[key],
+          answerValue: answer[key]
+        });
+      }
     }
 
     return { totalScore, details };

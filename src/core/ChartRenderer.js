@@ -11,15 +11,123 @@ class ChartRenderer {
       this.chartInstance.dispose();
     }
 
-    this.chartInstance = echarts.init(container);
-    window.chartInstance = this.chartInstance;
+    if (task.isDashboard) {
+      // 渲染仪表盘
+      this.renderDashboard(task, config);
+    } else {
+      // 渲染普通图表
+      this.chartInstance = echarts.init(container);
+      window.chartInstance = this.chartInstance;
 
-    const option = this.buildChartOption(task, config);
-    this.chartInstance.setOption(option);
+      const option = this.buildChartOption(task, config);
+      this.chartInstance.setOption(option);
 
-    window.addEventListener('resize', () => {
-      this.chartInstance.resize();
+      window.addEventListener('resize', () => {
+        this.chartInstance.resize();
+      });
+    }
+  }
+
+  renderDashboard(task, config) {
+    const container = document.getElementById('chart-container');
+    
+    // 确保config有subTasks
+    if (!config.subTasks) {
+      config.subTasks = [];
+    }
+    
+    // 确保每个子任务都有配置
+    task.subTasks.forEach((subTask, index) => {
+      if (!config.subTasks[index]) {
+        config.subTasks[index] = {
+          chartType: subTask.answer.chartType,
+          title: subTask.answer.title
+        };
+      }
     });
+    
+    container.innerHTML = `
+      <div class="dashboard-preview" style="display: ${config.layout === 'grid' ? 'grid' : config.layout === 'vertical' ? 'flex' : 'flex'}; grid-template-columns: ${config.layout === 'grid' ? 'repeat(2, 1fr)' : '1fr'}; flex-direction: ${config.layout === 'vertical' ? 'column' : 'row'}; gap: 20px; height: 100%;">
+        ${task.subTasks.map((subTask, index) => {
+          const subConfig = config.subTasks[index];
+          return `
+            <div class="dashboard-chart" style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 15px; min-height: 300px;">
+              <h4 style="margin-top: 0; color: #e0e0e0;">${subConfig.title || subTask.name}</h4>
+              <div id="subchart-${index}" style="width: 100%; height: 250px;"></div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    // 延迟渲染，确保DOM已准备好
+    setTimeout(() => {
+      task.subTasks.forEach((subTask, index) => {
+        const subConfig = config.subTasks[index];
+        const subChartContainer = document.getElementById(`subchart-${index}`);
+        
+        if (subChartContainer) {
+          try {
+            const subChart = echarts.init(subChartContainer);
+            
+            // 获取合适的数据
+            let chartData = [];
+            if (task.dataset.data) {
+              if (Array.isArray(task.dataset.data)) {
+                chartData = task.dataset.data;
+              } else if (task.dataset.data.monthly && index === 0) {
+                chartData = task.dataset.data.monthly;
+              } else if (task.dataset.data.category && index === 1) {
+                chartData = task.dataset.data.category;
+              } else if (task.dataset.data.monthly && index === 2) {
+                chartData = task.dataset.data.monthly;
+              } else {
+                chartData = [
+                  ['1月', 12000, 3600],
+                  ['2月', 15000, 4500],
+                  ['3月', 18000, 5400],
+                  ['4月', 16000, 4800],
+                  ['5月', 22000, 6600],
+                  ['6月', 28000, 8400]
+                ];
+              }
+            }
+            
+            // 构建简单可靠的图表选项
+            const chartType = subConfig.chartType || 'bar';
+            const option = {
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              title: {
+                text: subConfig.title || subTask.name,
+                textStyle: { color: '#e0e0e0' }
+              },
+              tooltip: {
+                trigger: chartType === 'pie' ? 'item' : 'axis'
+              },
+              xAxis: chartType !== 'pie' ? {
+                type: 'category',
+                data: chartData.map(row => row[0]),
+                axisLabel: { color: '#e0e0e0' }
+              } : undefined,
+              yAxis: chartType !== 'pie' ? {
+                type: 'value',
+                axisLabel: { color: '#e0e0e0' }
+              } : undefined,
+              series: [{
+                type: chartType,
+                data: chartType === 'pie' 
+                  ? chartData.map((row, i) => ({ name: row[0], value: row[1] }))
+                  : chartData.map(row => row[1])
+              }]
+            };
+            
+            subChart.setOption(option);
+          } catch (error) {
+            console.error('图表渲染错误:', error);
+          }
+        }
+      });
+    }, 200);
   }
 
   getThemeColors(theme) {
