@@ -1,4 +1,4 @@
-// 大屏管理模块
+// 大屏管理模块 - 版本1.2
 class DashboardManager {
   constructor() {
     this.dashboardLayout = {
@@ -337,6 +337,12 @@ class DashboardManager {
         <label style="display: block; color: #e0e0e0; margin-bottom: 10px;">图表标题</label>
         <input type="text" id="chart-title-input" placeholder="请输入图表标题" style="width: 100%; padding: 10px; border: 1px solid #333; border-radius: 4px; background: #2a2a3e; color: #e0e0e0;">
       </div>
+      <div style="margin: 20px 0;">
+        <label style="display: block; color: #e0e0e0; margin-bottom: 10px;">
+          <input type="checkbox" id="chart-dynamic" style="margin-right: 8px;"> 启用动态数据
+        </label>
+        <small style="color: #999; display: block; margin-top: 5px;">数据将随时间自动变化</small>
+      </div>
       <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
         <button id="cancel-btn" style="padding: 10px 20px; border: 1px solid #666; border-radius: 4px; background: #333; color: #e0e0e0; cursor: pointer;">取消</button>
         <button id="confirm-btn" style="padding: 10px 20px; border: none; border-radius: 4px; background: #667eea; color: white; cursor: pointer;">确定</button>
@@ -361,6 +367,7 @@ class DashboardManager {
     document.getElementById('confirm-btn').addEventListener('click', () => {
       const chartType = document.getElementById('chart-type-select').value;
       const chartTitle = document.getElementById('chart-title-input').value;
+      const isDynamic = document.getElementById('chart-dynamic').checked;
       
       // 更新图表配置
       if (!this.dashboardLayout.charts) {
@@ -370,7 +377,8 @@ class DashboardManager {
       this.dashboardLayout.charts[chartId] = {
         type: chartType,
         title: chartTitle || `图表 ${chartId.replace('chart', '')}`,
-        data: this.getDefaultChartData(chartType)
+        data: this.getDefaultChartData(chartType),
+        dynamic: isDynamic
       };
       
       // 重新渲染图表
@@ -381,7 +389,7 @@ class DashboardManager {
       if (item) {
         const titleElement = item.querySelector('.dashboard-item-header span');
         if (titleElement) {
-          titleElement.textContent = this.dashboardLayout.charts[chartId].title;
+          titleElement.textContent = this.dashboardLayout.charts[chartId].title + (isDynamic ? ' (动态)' : '');
         }
       }
       
@@ -414,6 +422,10 @@ class DashboardManager {
       
       const chart = echarts.init(container);
       const chartType = chartInfo.type || 'bar';
+      
+      // 生成初始数据
+      let data = chartInfo.data || this.getDefaultChartData(chartType);
+      
       const option = {
         backgroundColor: 'rgba(0,0,0,0.3)',
         title: {
@@ -435,12 +447,67 @@ class DashboardManager {
         series: [{
           type: chartType,
           data: chartType === 'pie' 
-            ? chartInfo.data.map((v, i) => ({ name: `数据${i+1}`, value: v }))
-            : chartInfo.data
+            ? data.map((v, i) => ({ name: `数据${i+1}`, value: v }))
+            : data
         }]
       };
       
       chart.setOption(option);
+      
+      // 启用动态数据
+      if (chartInfo.dynamic) {
+        // 清除之前的定时器
+        if (window.dynamicChartTimers) {
+          clearInterval(window.dynamicChartTimers[chartId]);
+        }
+        
+        if (!window.dynamicChartTimers) {
+          window.dynamicChartTimers = {};
+        }
+        
+        // 设置新的定时器，每2秒更新一次数据
+        window.dynamicChartTimers[chartId] = setInterval(() => {
+          try {
+            // 生成新的随机数据
+            if (chartType === 'pie' || chartType === 'funnel') {
+              // 饼图和漏斗图：保持总和不变，随机分配
+              const total = data.reduce((sum, v) => sum + v, 0);
+              const newData = [];
+              let remaining = total;
+              
+              for (let i = 0; i < data.length - 1; i++) {
+                const value = Math.floor(Math.random() * remaining * 0.8);
+                newData.push(value);
+                remaining -= value;
+              }
+              newData.push(remaining);
+              data = newData;
+            } else {
+              // 柱状图和折线图：随机波动
+              data = data.map(value => {
+                const change = value * 0.2 * (Math.random() - 0.5);
+                return Math.max(0, Math.floor(value + change));
+              });
+            }
+            
+            // 更新图表数据
+            chart.setOption({
+              series: [{
+                data: chartType === 'pie' 
+                  ? data.map((v, i) => ({ name: `数据${i+1}`, value: v }))
+                  : data
+              }]
+            });
+          } catch (error) {
+            console.error('更新动态数据出错:', error);
+          }
+        }, 2000);
+      } else {
+        // 禁用动态数据时清除定时器
+        if (window.dynamicChartTimers) {
+          clearInterval(window.dynamicChartTimers[chartId]);
+        }
+      }
     } catch (error) {
       console.error('渲染单个图表出错:', error);
     }
@@ -512,16 +579,24 @@ class DashboardManager {
   getThemeColors(theme) {
     const themes = {
       'tech-dark': {
-        colors: ['#00d4ff', '#ff00d4', '#00ff88', '#ffd700', '#ff6b6b', '#4ecdc4']
+        colors: ['#00d4ff', '#ff00d4', '#00ff88', '#ffd700', '#ff6b6b', '#4ecdc4'],
+        bg: '#0a0a1a',
+        text: '#e0e0e0'
       },
       'neon-blue': {
-        colors: ['#00ffff', '#0088ff', '#0044ff', '#00ffff', '#0088ff', '#0044ff']
+        colors: ['#00ffff', '#0088ff', '#0044ff', '#00ffff', '#0088ff', '#0044ff'],
+        bg: '#000a1a',
+        text: '#00ffff'
       },
       'cyberpunk': {
-        colors: ['#ff006e', '#00f5ff', '#ffff00', '#00ff00', '#bf00ff', '#ff6600']
+        colors: ['#ff006e', '#00f5ff', '#ffff00', '#00ff00', '#bf00ff', '#ff6600'],
+        bg: '#1a001a',
+        text: '#ff006e'
       },
       'business-light': {
-        colors: ['#1e40af', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2']
+        colors: ['#1e40af', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2'],
+        bg: '#f8fafc',
+        text: '#1e293b'
       }
     };
     return themes[theme] || themes['tech-dark'];
@@ -572,14 +647,18 @@ class DashboardManager {
           const chartInfo = this.dashboardLayout.charts?.[item.id];
           const chartType = chartInfo?.type || 'bar';
           const data = chartInfo?.data || [120, 200, 150, 80, 70, 110, 130];
+          const isDynamic = chartInfo?.dynamic || false;
           
           return `
             try {
               const chart${item.id} = echarts.init(document.getElementById('chart-${item.id}'));
+              let data${item.id} = ${JSON.stringify(data)};
+              const chartType${item.id} = '${chartType}';
+              
               const option${item.id} = {
                 backgroundColor: 'rgba(0,0,0,0.3)',
                 title: {
-                  text: '${chartInfo?.title || `图表 ${item.id.replace('chart', '')}`}',
+                  text: '${chartInfo?.title || `图表 ${item.id.replace('chart', '')}`}' + ${isDynamic ? "' (动态)'" : "''"},
                   textStyle: { color: '#e0e0e0' }
                 },
                 tooltip: {
@@ -600,6 +679,44 @@ class DashboardManager {
                 }]
               };
               chart${item.id}.setOption(option${item.id});
+              
+              ${isDynamic ? `
+              // 动态数据更新
+              setInterval(() => {
+                try {
+                  if (chartType${item.id} === 'pie' || chartType${item.id} === 'funnel') {
+                    // 饼图和漏斗图：保持总和不变，随机分配
+                    const total = data${item.id}.reduce((sum, v) => sum + v, 0);
+                    const newData = [];
+                    let remaining = total;
+                    
+                    for (let i = 0; i < data${item.id}.length - 1; i++) {
+                      const value = Math.floor(Math.random() * remaining * 0.8);
+                      newData.push(value);
+                      remaining -= value;
+                    }
+                    newData.push(remaining);
+                    data${item.id} = newData;
+                  } else {
+                    // 柱状图和折线图：随机波动
+                    data${item.id} = data${item.id}.map(value => {
+                      const change = value * 0.2 * (Math.random() - 0.5);
+                      return Math.max(0, Math.floor(value + change));
+                    });
+                  }
+                  
+                  chart${item.id}.setOption({
+                    series: [{
+                      data: chartType${item.id} === 'pie' 
+                        ? data${item.id}.map((v, i) => ({ name: '数据' + (i+1), value: v }))
+                        : data${item.id}
+                    }]
+                  });
+                } catch (error) {
+                  console.error('更新动态数据出错:', error);
+                }
+              }, 2000);
+              ` : ''}
             } catch (error) {
               console.error('图表渲染错误:', error);
             }
